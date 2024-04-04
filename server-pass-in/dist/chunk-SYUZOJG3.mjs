@@ -1,0 +1,1 @@
+import{a as t}from"./chunk-WDSV34T6.mjs";import{ZodError as r}from"zod";var i=(e,a,s)=>e instanceof r?s.status(400).send({message:"Invalid request body.",errors:e.flatten().fieldErrors}):e instanceof t?s.status(e.statusCode||400).send({message:e.message}):s.status(500).send({message:"Something went wrong. Please try again later."});export{i as a};
