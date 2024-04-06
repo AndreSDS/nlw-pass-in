@@ -29,6 +29,7 @@ export async function getEventAttendees(app: FastifyInstance) {
                 checkIn: z.date().nullable(),
               })
             ),
+            total: z.number().int(),
           }),
           404: z.object({
             message: z.string(),
@@ -92,6 +93,11 @@ export async function getEventAttendees(app: FastifyInstance) {
           createdAt: attendee.createdAt,
           checkIn: attendee.checkIn?.createdAt || null,
         })),
+        total: await prisma.attendee.count({
+          where: {
+            eventId,
+          },
+        }) || 0,
       });
     }
   );

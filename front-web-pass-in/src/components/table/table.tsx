@@ -1,4 +1,3 @@
-import { ChangeEvent, useRef, useState } from "react";
 import { IconButton } from "../icon-button";
 import { TableComponents } from "./table-component";
 import {
@@ -8,41 +7,29 @@ import {
   ChevronsRight,
   MoreHorizontal,
 } from "lucide-react";
-import { attendees } from "../../data/attendee";
 import { relativeDate } from "../../utils/format";
+import { useGetAttendees } from "../../hooks/useGetAttendees";
+import { useAttendeesStore } from "../../context/useAttendeesStore";
 
 export const Table = () => {
-  const useSearchRef = useRef<HTMLInputElement>(null);
-  const [page, setPage] = useState(1);
-  function onSearchInput(event: ChangeEvent<HTMLInputElement>) {
-    if (event.target.value === "") {
-      if (useSearchRef.current !== null) {
-        useSearchRef.current.value = event.target.value;
-      }
-    }
+  const {
+    attendeeItem,
+    attendeeItem: { pageIndex },
+    setAttendeeItem,
+  } = useAttendeesStore();
+  const { data } = useGetAttendees();
+  const { attendees, total } = data || {};
+
+  const totalPages = total ? Math.ceil(total / 10) : 1;
+
+  function setCurrentPage(page: number) {
+    const url = new URL(window.location.toString());
+    url.searchParams.set("page", String(page));
+    window.history.pushState({}, "", url.toString());
+    setAttendeeItem({ ...attendeeItem, pageIndex: page });
   }
 
-  const totalPages = Math.ceil(attendees.length / 10);
-
-  function goToNextPage() {
-    if (page === totalPages) return;
-    setPage((page) => page + 1);
-  }
-
-  function goToPreviousPage() {
-    if (page === 1) return;
-    setPage((page) => page - 1);
-  }
-
-  function goToFirstPage() {
-    if (page === 1) return;
-    setPage(1);
-  }
-
-  function goToLastPage() {
-    if (page === totalPages) return;
-    setPage(totalPages);
-  }
+  console.log({ total });
 
   return (
     <TableComponents.Table>
@@ -50,8 +37,6 @@ export const Table = () => {
         <TableComponents.TRComponent>
           <TableComponents.THComponent style={{ width: 48 }}>
             <input
-              ref={useSearchRef}
-              onChange={onSearchInput}
               className="size-4 rounded border-white/10 outline-none checked:accent-green-500"
               type="checkbox"
             />
@@ -75,9 +60,8 @@ export const Table = () => {
       </TableComponents.THeadComponent>
 
       <TableComponents.TBodyComponent>
-        {attendees
-          .slice((page - 1) * 10, page * 10)
-          .map(({ id, name, email, createdAt, checkedInAt }) => (
+        {attendees &&
+          attendees.map(({ id, name, email, createdAt, checkIn }) => (
             <TableComponents.TRComponent key={id}>
               <TableComponents.TDComponent>
                 <input
@@ -96,7 +80,7 @@ export const Table = () => {
                 {relativeDate(createdAt)}
               </TableComponents.TDComponent>
               <TableComponents.TDComponent>
-                {relativeDate(checkedInAt)}
+                {checkIn ? relativeDate(checkIn) : "Aguardando check-in"}
               </TableComponents.TDComponent>
               <TableComponents.TDComponent>
                 <IconButton className="bg-black/20 border border-white/10">
@@ -110,30 +94,24 @@ export const Table = () => {
       <TableComponents.TFootComponent>
         <TableComponents.TRComponent>
           <TableComponents.TDComponent colSpan={3}>
-            Mostrando 10 de {attendees.length} items
+            Mostrando {attendees?.length} de {total || 0} items
           </TableComponents.TDComponent>
           <TableComponents.TDComponent colSpan={3} className="text-right">
             <div className="inline-flex items-center gap-8">
               <span>
-                Página {page} de {Math.ceil(attendees.length / 10)}
+                Página {pageIndex === 0 ? 1 : pageIndex} de {totalPages}
               </span>
               <div className="flex gap-1.5">
-                <IconButton disabled={page === 1} onClick={goToFirstPage}>
+                <IconButton disabled={pageIndex === 0}>
                   <ChevronsLeft className="size-4" />
                 </IconButton>
-                <IconButton disabled={page === 1} onClick={goToPreviousPage}>
+                <IconButton disabled={pageIndex === 0}>
                   <ChevronLeft className="size-4" />
                 </IconButton>
-                <IconButton
-                  disabled={page === totalPages}
-                  onClick={goToNextPage}
-                >
+                <IconButton disabled={pageIndex === totalPages}>
                   <ChevronRight className="size-4" />
                 </IconButton>
-                <IconButton
-                  disabled={page === totalPages}
-                  onClick={goToLastPage}
-                >
+                <IconButton disabled={pageIndex === totalPages}>
                   <ChevronsRight className="size-4" />
                 </IconButton>
               </div>
