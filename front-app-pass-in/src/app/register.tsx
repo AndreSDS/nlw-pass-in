@@ -5,19 +5,55 @@ import { colors } from "@/styles/colors";
 import { Input } from "@/components/input";
 import { Button } from "@/components/button";
 import { useUser } from "@/context/userContext";
+import { api, registerToEvent } from "@/server/api";
+import { useState } from "react";
+import axios from "axios";
 
 export default function Register() {
   const { user, setUser } = useUser();
+  const [loading, setLoading] = useState(false);
 
   const isDisabled = !user.name.trim() || !user.email.trim();
 
-  function handleRegister() {
+  async function handleRegister() {
     if (!user.name.trim() || !user.email.trim()) {
       return Alert.alert("Inscrição", "Preencha todos os campos!");
     }
 
-    router.push("/ticket");
+    const userInfo = {
+      name: user.name,
+      email: user.email,
+    };
+
+    try {
+      setLoading(true);
+      const { attendeeId } = await registerToEvent(userInfo);
+
+      if (!!attendeeId) {
+        setUser({
+          ...user,
+          ticketCode: String(attendeeId),
+        });
+
+        Alert.alert("Inscrição", "Inscrição realizada com sucesso!", [
+          {
+            text: "OK",
+            onPress: () => router.push("/ticket"),
+          },
+        ]);
+      }
+    } catch (error) {
+      setLoading(false);
+      console.log(error);
+      if (axios.isAxiosError(error)) {
+        const { response } = error;
+        return Alert.alert("Inscrição", `Message: ${response?.data.message}`);
+      }
+
+      Alert.alert("Inscrição", "Erro ao realizar inscrição!");
+    }
   }
+
   return (
     <View className="flex-1 bg-green-500 items-center justify-center p-8">
       <StatusBar barStyle="light-content" />
@@ -49,7 +85,8 @@ export default function Register() {
         <Button
           title="Realizar inscrição"
           onPress={handleRegister}
-          disabled={isDisabled}
+          disabled={isDisabled || loading}
+          isLoading={loading}
         />
         <Link
           href="/"

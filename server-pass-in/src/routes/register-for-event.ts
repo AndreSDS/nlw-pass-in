@@ -65,6 +65,8 @@ export async function registerForevent(app: FastifyInstance) {
         }
       }
 
+      console.log("Creating attendee", { name, email, eventId });
+
       const attendee = await prisma.attendee.create({
         data: {
           name,

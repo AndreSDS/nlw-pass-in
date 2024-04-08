@@ -48,11 +48,11 @@ export async function getAttendeeBadge(app: FastifyInstance) {
         },
       });
 
-      if (attendee === null) {
+      if (!attendee) {
         throw new BadRequestError("Attendee not found");
       }
 
-      const baseUrl = `{request.protocol}://{request.hostname}`;
+      const baseUrl = `${request.protocol}://${request.hostname}`;
       const checkInUrl = new URL(`/attendees/${attendeeId}/check-in`, baseUrl);
 
       return reply.send({

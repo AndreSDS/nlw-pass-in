@@ -5,13 +5,27 @@ import { colors } from "@/styles/colors";
 import { Input } from "@/components/input";
 import { Button } from "@/components/button";
 import { useUser } from "@/context/userContext";
+import { useState } from "react";
+import { api, getAttendeeBadge, registerToEvent } from "@/server/api";
 
 export default function Home() {
   const { user, setUser } = useUser();
+  const [loading, setLoading] = useState(false);
 
-  function handleTicketCode() {
+  async function handleTicketCode() {
     if (!user.ticketCode.trim()) {
       return Alert.alert("Ingresso", "Informe o código do ingresso!");
+    }
+
+    try {
+      setLoading(true);
+
+      const { badge } = await getAttendeeBadge(user.ticketCode);
+
+    } catch (error) {
+      console.log(error);
+      setLoading(false);
+      Alert.alert("Ingresso", "Erro ao acessar credencial!");
     }
   }
 
