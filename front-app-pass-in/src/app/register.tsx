@@ -4,53 +4,64 @@ import { Link, router } from "expo-router";
 import { colors } from "@/styles/colors";
 import { Input } from "@/components/input";
 import { Button } from "@/components/button";
-import { useUser } from "@/context/userContext";
-import { api, registerToEvent } from "@/server/api";
-import { useState } from "react";
 import axios from "axios";
+import {
+  useGetAttendeeBadge,
+  useRegisterAttendeeToEvent,
+} from "@/hooks/useGetAttendees";
+import { useRef } from "react";
+import { queryClient } from "@/lib/useQuery";
+import { Attendee, AttendeeBadge, AttendeeInfo } from "@/server/api";
 
 export default function Register() {
-  const { user, setUser } = useUser();
-  const [loading, setLoading] = useState(false);
+  const attendeeInfo = useRef<AttendeeInfo>({
+    name: "",
+    email: "",
+  });
+  const { attendeeId, registerError, registerFetching } =
+    useRegisterAttendeeToEvent(attendeeInfo.current);
+  const { badgeError, badgeFetching } = useGetAttendeeBadge(
+    attendeeId?.attendeeId.toString() || ""
+  );
 
-  const isDisabled = !user.name.trim() || !user.email.trim();
+  function handleChange(field: string, val: string) {
+    attendeeInfo.current = {
+      ...attendeeInfo.current,
+      [field]: val,
+    };
+  }
 
   async function handleRegister() {
-    if (!user.name.trim() || !user.email.trim()) {
+    if (
+      !attendeeInfo.current.name.trim() ||
+      !attendeeInfo.current.email.trim()
+    ) {
       return Alert.alert("Inscrição", "Preencha todos os campos!");
     }
 
-    const userInfo = {
-      name: user.name,
-      email: user.email,
-    };
-
     try {
-      setLoading(true);
-      const { attendeeId } = await registerToEvent(userInfo);
+      const { attendeeId } = await queryClient.fetchQuery<Attendee>({
+        queryKey: ["attendee"],
+      });
 
-      if (!!attendeeId) {
-        setUser({
-          ...user,
-          ticketCode: String(attendeeId),
+      if (attendeeId) {
+        await queryClient.fetchQuery<AttendeeBadge>({
+          queryKey: ["attendeeBadge"],
         });
 
-        Alert.alert("Inscrição", "Inscrição realizada com sucesso!", [
-          {
-            text: "OK",
-            onPress: () => router.push("/ticket"),
-          },
-        ]);
+        router.push("/ticket");
       }
-    } catch (error) {
-      setLoading(false);
-      console.log(error);
-      if (axios.isAxiosError(error)) {
-        const { response } = error;
-        return Alert.alert("Inscrição", `Message: ${response?.data.message}`);
-      }
+    } catch {
+      if (registerError) {
+        if (axios.isAxiosError(registerError)) {
+          const { response } = registerError;
+          console.error(response?.data.message);
+          return Alert.alert("Participante", `Erro: ${response?.data.message}`);
+        }
 
-      Alert.alert("Inscrição", "Erro ao realizar inscrição!");
+        console.error(registerError.message);
+        return Alert.alert("Participante", `Erro: ${registerError.message}`);
+      }
     }
   }
 
@@ -69,7 +80,7 @@ export default function Register() {
           <Input.Icon name="account-circle-outline" color={colors.green[200]} />
           <Input.Field
             placeholder="Nome completo"
-            onChangeText={(val) => setUser({ ...user, name: val })}
+            onChangeText={(val) => handleChange("name", val)}
           />
         </Input>
 
@@ -78,15 +89,15 @@ export default function Register() {
           <Input.Field
             placeholder="Email"
             keyboardType="email-address"
-            onChangeText={(val) => setUser({ ...user, email: val })}
+            onChangeText={(val) => handleChange("email", val)}
           />
         </Input>
 
         <Button
           title="Realizar inscrição"
           onPress={handleRegister}
-          disabled={isDisabled || loading}
-          isLoading={loading}
+          disabled={registerFetching || badgeFetching}
+          isLoading={registerFetching || badgeFetching}
         />
         <Link
           href="/"

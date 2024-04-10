@@ -5,23 +5,62 @@ import {
   View,
   Text,
   TouchableOpacity,
-  Modal,
 } from "react-native";
+import * as ImagePicker from "expo-image-picker";
 import { Feather } from "@expo/vector-icons";
-import { useUser } from "@/context/userContext";
 import { colors } from "@/styles/colors";
 import { QRCode } from "@/components/qrcode";
 import { ModalComponent } from "./modal";
+import { queryClient } from "@/lib/useQuery";
+import { AttendeeBadge } from "@/server/api";
 
-type CredentialProps = {
-  onChangeAvatar?: () => void;
+type CredentialBadge = {
+  badge: AttendeeBadge;
 };
 
-export function Credential({ onChangeAvatar }: CredentialProps) {
-  const { user } = useUser();
+export function Credential() {
   const [expanded, setExpanded] = useState<boolean>(false);
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const { badge } = queryClient.getQueryData([
+    "attendeeBadge",
+  ]) as CredentialBadge;
 
-  console.log({ uri: user.avatar });
+  const { name, email, checkInUrl } = badge;
+
+  async function handleSelectAvatar() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+
+    if (status !== "granted") {
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 4],
+      quality: 1,
+    });
+
+    if (result.assets) {
+      queryClient.setQueryData(
+        ["attendeeBadge"],
+        (badgeResult: CredentialBadge) => {
+          return {
+            badge: {
+              ...badgeResult.badge,
+              avatar: result.assets[0].uri,
+            },
+          };
+        }
+      );
+
+      setAvatar(result.assets[0].uri);
+    }
+  }
+
+  function handleModal() {
+    setExpanded(!expanded);
+  }
 
   return (
     <View className="w-full self-stretch items-center">
@@ -38,51 +77,47 @@ export function Credential({ onChangeAvatar }: CredentialProps) {
           resizeMode="contain"
         >
           <View className="w-full flex-row items-center justify-between">
-            <Text className="text-zinc-50 text-sm font-bold">Unite Sumit</Text>
-            <Text className="text-zinc-50 text-sm font-bold">2022</Text>
+            <Text className="text-zinc-50 text-sm font-bold">Unite Summit</Text>
+            <Text className="text-zinc-50 text-sm font-bold">2024</Text>
           </View>
 
           <View className="w-40 h-40 bg-black rounded-full" />
         </ImageBackground>
 
-        {user.avatar ? (
-          <TouchableOpacity activeOpacity={0.9} onPress={onChangeAvatar}>
+        <TouchableOpacity
+          activeOpacity={0.9}
+          onPress={handleSelectAvatar}
+          className="w-36 h-36 rounded-full -mt-24 bg-gray-400 items-center justify-center"
+        >
+          {avatar ? (
             <Image
-              source={{ uri: user.avatar }}
-              className="w-36 h-36 rounded-full -mt-24 bg-gray-400 items-center justify-center"
+              source={{ uri: avatar }}
+              className="w-36 h-36 rounded-full"
             />
-          </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            activeOpacity={0.9}
-            onPress={onChangeAvatar}
-            className="w-36 h-36 rounded-full -mt-24 bg-gray-400 items-center justify-center"
-          >
+          ) : (
             <Feather name="camera" size={32} color={colors.green[400]} />
-          </TouchableOpacity>
-        )}
+          )}
+        </TouchableOpacity>
 
-        <Text className="mt-4 font-bold text-2xl text-zinc-50">
-          Andre Souza
-        </Text>
+        <Text className="mt-4 font-bold text-2xl text-zinc-50">{name}</Text>
         <Text className="font-regular text-base text-zinc-300 mb-3">
-          andre_smiths@outlook.com
+          {email}
         </Text>
-
-        <QRCode value="teste asdasdasd" size={120} />
 
         <TouchableOpacity
-          onPress={() => setExpanded(!expanded)}
+          onPress={handleModal}
           activeOpacity={0.7}
-          className="items-center mt-4"
+          className="items-center gap-4"
         >
+          <QRCode value={checkInUrl} size={120} />
+
           <Text className="font-body text-orange-500 text-sm">
             Ampliar QRCode
           </Text>
         </TouchableOpacity>
       </View>
 
-      <ModalComponent />
+      <ModalComponent isOpen={expanded} handleModal={handleModal} />
     </View>
   );
 }

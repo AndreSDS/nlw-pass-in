@@ -1,25 +1,41 @@
 import { create } from "zustand";
 
-export type User = {
+export type AttendeeBadge = {
+  name: string;
+  email: string;
+  event: string;
+  checkInUrl: string;
+};
+
+export type Attendee = {
   avatar: string;
   name: string;
   email: string;
-  ticketCode: string;
+  attendeeId: string;
 };
 
-interface UserStore {
-  user: User;
-  setUser: (user: User) => void;
+interface AttendeeStore {
+  attendee: Attendee;
+  badge: AttendeeBadge;
+  setUser: (attendee: Attendee) => void;
+  setBadge: (badge: AttendeeBadge) => void;
 }
 
-const useUser = create<UserStore>()((set) => ({
-  user: {
+const useAttendee = create<AttendeeStore>()((set) => ({
+  attendee: {
     avatar: "",
     name: "",
     email: "",
-    ticketCode: "",
+    attendeeId: "",
   },
-  setUser: (user) => set({ user }),
+  badge: {
+    name: "",
+    email: "",
+    event: "",
+    checkInUrl: "",
+  },
+  setUser: (attendee) => set({ attendee }),
+  setBadge: (badge) => set({ badge }),
 }));
 
-export { useUser };
+export { useAttendee };

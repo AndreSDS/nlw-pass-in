@@ -5,17 +5,29 @@ export const api = axios.create({
   baseURL: "http://127.0.0.1:3333",
 });
 
-type RegisterResponse = {
-  attendeeId: number;
+export type AttendeeBadge = {
+  avatar?: string;
+  name: string;
+  email: string;
+  event: string;
+  checkInUrl: string;
 };
 
-type AttendeeBadge = {
-  badge: {
-    name: string;
-    email: string;
-    event: string;
-    checkInUrl: string;
-  };
+export type Attendee = {
+  avatar: string;
+  name: string;
+  email: string;
+  attendeeId: string;
+};
+
+export type AttendeeInfo = {
+  name: string;
+  email: string;
+};
+
+
+export type RegisterResponse = {
+  attendeeId: number;
 };
 
 export async function registerToEvent(userInfo: {

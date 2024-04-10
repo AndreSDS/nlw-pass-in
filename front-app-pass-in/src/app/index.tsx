@@ -1,33 +1,58 @@
-import { View, Image, StatusBar, Alert } from "react-native";
-import { Link } from "expo-router";
-
+import { useEffect, useRef } from "react";
+import { View, Image, StatusBar, Alert, AppState } from "react-native";
+import { Link, router } from "expo-router";
+import axios from "axios";
+import NetInfo from "@react-native-community/netinfo";
+import { onlineManager, onAppStateChange, queryClient } from "@/lib/useQuery";
 import { colors } from "@/styles/colors";
 import { Input } from "@/components/input";
 import { Button } from "@/components/button";
-import { useUser } from "@/context/userContext";
-import { useState } from "react";
-import { api, getAttendeeBadge, registerToEvent } from "@/server/api";
+import { useGetAttendeeBadge } from "@/hooks/useGetAttendees";
+import { AttendeeBadge } from "@/server/api";
 
 export default function Home() {
-  const { user, setUser } = useUser();
-  const [loading, setLoading] = useState(false);
+  const attendeeId = useRef<string>("");
+  const { badgeError, badgeFetching } = useGetAttendeeBadge(attendeeId.current);
+
+  const handleChange = (val: string) => (attendeeId.current = val);
 
   async function handleTicketCode() {
-    if (!user.ticketCode.trim()) {
+    if (!attendeeId.current.trim()) {
       return Alert.alert("Ingresso", "Informe o código do ingresso!");
     }
 
     try {
-      setLoading(true);
+      await queryClient.fetchQuery<AttendeeBadge>({
+        queryKey: ["attendeeBadge"],
+      });
 
-      const { badge } = await getAttendeeBadge(user.ticketCode);
+      router.push("/ticket");
+    } catch {
+      if (badgeError) {
+        if (axios.isAxiosError(badgeError)) {
+          const { response } = badgeError;
+          console.error(response?.data.message);
+          return Alert.alert("Ingresso", `Erro: ${response?.data.message}`);
+        }
 
-    } catch (error) {
-      console.log(error);
-      setLoading(false);
-      Alert.alert("Ingresso", "Erro ao acessar credencial!");
+        console.error(badgeError.message);
+        return Alert.alert("Ingresso", `Erro: ${badgeError.message}`);
+      }
     }
   }
+
+  useEffect(() => {
+    onlineManager.setEventListener((setOnline) => {
+      return NetInfo.addEventListener((state) => {
+        setOnline(!!state.isConnected);
+      });
+    });
+  }, [NetInfo, onAppStateChange]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener("change", onAppStateChange);
+    return () => subscription.remove();
+  }, []);
 
   return (
     <View className="flex-1 bg-green-500 items-center justify-center p-8">
@@ -47,11 +72,16 @@ export default function Home() {
           />
           <Input.Field
             placeholder="Codigo do ingresso..."
-            onChangeText={(val) => setUser({ ...user, ticketCode: val })}
+            onChangeText={handleChange}
           />
         </Input>
 
-        <Button title="Acessar credencial" onPress={handleTicketCode} />
+        <Button
+          disabled={badgeFetching}
+          isLoading={badgeFetching}
+          title="Acessar credencial"
+          onPress={handleTicketCode}
+        />
         <Link
           href="/register"
           className="text-gray-100 text-base text-center mt-8 font-bold"

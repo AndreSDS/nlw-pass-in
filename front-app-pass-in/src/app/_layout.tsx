@@ -1,5 +1,6 @@
 import "@/styles/global.css";
 import { Slot } from "expo-router";
+import { queryClient, QueryClientProvider } from "@/lib/useQuery";
 import {
   useFonts,
   RobotoMono_400Regular,
@@ -19,5 +20,9 @@ export default function Layout() {
     return <Loading bgColor="bg-green-500" color="text-orange-200" />;
   }
 
-  return <Slot />;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Slot />
+    </QueryClientProvider>
+  );
 }
