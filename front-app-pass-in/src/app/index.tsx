@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { View, Image, StatusBar, Alert, AppState } from "react-native";
-import { Link, router } from "expo-router";
+import { Link, Redirect } from "expo-router";
 import axios from "axios";
 import NetInfo from "@react-native-community/netinfo";
 import { onlineManager, onAppStateChange, queryClient } from "@/lib/useQuery";
@@ -9,9 +9,11 @@ import { Input } from "@/components/input";
 import { Button } from "@/components/button";
 import { useGetAttendeeBadge } from "@/hooks/useGetAttendees";
 import { AttendeeBadge } from "@/server/api";
+import { Badge, useBadgeStore } from "@/store/badge-store";
 
 export default function Home() {
   const attendeeId = useRef<string>("");
+  const { data, saveBadge } = useBadgeStore();
   const { badgeError, badgeFetching } = useGetAttendeeBadge(attendeeId.current);
 
   const handleChange = (val: string) => (attendeeId.current = val);
@@ -22,11 +24,15 @@ export default function Home() {
     }
 
     try {
-      await queryClient.fetchQuery<AttendeeBadge>({
+      const { badge } = await queryClient.fetchQuery<{ badge: AttendeeBadge }>({
         queryKey: ["attendeeBadge"],
       });
 
-      router.push("/ticket");
+      const badgeData: Badge = {
+        id: attendeeId.current,
+        ...badge,
+      };
+      saveBadge(badgeData);
     } catch {
       if (badgeError) {
         if (axios.isAxiosError(badgeError)) {
@@ -54,6 +60,9 @@ export default function Home() {
     return () => subscription.remove();
   }, []);
 
+  if (data) {
+    return <Redirect href="/ticket" />;
+  }
   return (
     <View className="flex-1 bg-green-500 items-center justify-center p-8">
       <StatusBar barStyle="light-content" />

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 
 export type AttendeeBadge = {
+  avatar?: string;
   name: string;
   email: string;
   event: string;

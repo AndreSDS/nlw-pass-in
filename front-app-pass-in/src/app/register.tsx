@@ -1,5 +1,5 @@
 import { View, Image, StatusBar, Alert } from "react-native";
-import { Link, router } from "expo-router";
+import { Link, Redirect } from "expo-router";
 
 import { colors } from "@/styles/colors";
 import { Input } from "@/components/input";
@@ -12,6 +12,7 @@ import {
 import { useRef } from "react";
 import { queryClient } from "@/lib/useQuery";
 import { Attendee, AttendeeBadge, AttendeeInfo } from "@/server/api";
+import { Badge, useBadgeStore } from "@/store/badge-store";
 
 export default function Register() {
   const attendeeInfo = useRef<AttendeeInfo>({
@@ -20,9 +21,10 @@ export default function Register() {
   });
   const { attendeeId, registerError, registerFetching } =
     useRegisterAttendeeToEvent(attendeeInfo.current);
-  const { badgeError, badgeFetching } = useGetAttendeeBadge(
+  const { badgeFetching } = useGetAttendeeBadge(
     attendeeId?.attendeeId.toString() || ""
   );
+  const { data, saveBadge } = useBadgeStore();
 
   function handleChange(field: string, val: string) {
     attendeeInfo.current = {
@@ -45,11 +47,17 @@ export default function Register() {
       });
 
       if (attendeeId) {
-        await queryClient.fetchQuery<AttendeeBadge>({
+        const { badge } = await queryClient.fetchQuery<{
+          badge: AttendeeBadge;
+        }>({
           queryKey: ["attendeeBadge"],
         });
 
-        router.push("/ticket");
+        const badgeData: Badge = {
+          id: attendeeId,
+          ...badge,
+        };
+        saveBadge(badgeData);
       }
     } catch {
       if (registerError) {
@@ -63,6 +71,10 @@ export default function Register() {
         return Alert.alert("Participante", `Erro: ${registerError.message}`);
       }
     }
+  }
+
+  if (data) {
+    return <Redirect href="/ticket" />;
   }
 
   return (

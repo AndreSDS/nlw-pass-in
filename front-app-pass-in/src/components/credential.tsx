@@ -5,27 +5,20 @@ import {
   View,
   Text,
   TouchableOpacity,
+  useWindowDimensions,
 } from "react-native";
 import * as ImagePicker from "expo-image-picker";
 import { Feather } from "@expo/vector-icons";
 import { colors } from "@/styles/colors";
 import { QRCode } from "@/components/qrcode";
 import { ModalComponent } from "./modal";
-import { queryClient } from "@/lib/useQuery";
-import { AttendeeBadge } from "@/server/api";
-
-type CredentialBadge = {
-  badge: AttendeeBadge;
-};
+import { Badge, useBadgeStore } from "@/store/badge-store";
+import { MotiView } from "moti";
 
 export function Credential() {
   const [expanded, setExpanded] = useState<boolean>(false);
-  const [avatar, setAvatar] = useState<string | null>(null);
-  const { badge } = queryClient.getQueryData([
-    "attendeeBadge",
-  ]) as CredentialBadge;
-
-  const { name, email, checkInUrl } = badge;
+  const { data, saveBadge } = useBadgeStore();
+  const { name, email, checkInUrl, avatar } = data || ({} as Badge);
 
   async function handleSelectAvatar() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -42,19 +35,12 @@ export function Credential() {
     });
 
     if (result.assets) {
-      queryClient.setQueryData(
-        ["attendeeBadge"],
-        (badgeResult: CredentialBadge) => {
-          return {
-            badge: {
-              ...badgeResult.badge,
-              avatar: result.assets[0].uri,
-            },
-          };
-        }
-      );
+      const badgeData: Badge = {
+        ...(data as Badge),
+        avatar: result.assets[0].uri,
+      };
 
-      setAvatar(result.assets[0].uri);
+      saveBadge(badgeData);
     }
   }
 
@@ -62,8 +48,34 @@ export function Credential() {
     setExpanded(!expanded);
   }
 
+  const { height } = useWindowDimensions();
+
   return (
-    <View className="w-full self-stretch items-center">
+    <MotiView
+      from={{
+        opacity: 0,
+        translateY: -height,
+        rotateX: "30deg",
+        rotateY: "30deg",
+        rotateZ: "50deg",
+      }}
+      animate={{
+        opacity: 1,
+        translateY: 0,
+        rotateX: "0deg",
+        rotateY: "0deg",
+        rotateZ: "0deg",
+      }}
+      transition={{
+        type: "spring",
+        damping: 20,
+        rotateZ: {
+          damping: 15,
+          mass: 3,
+        },
+      }}
+      className="w-full self-stretch items-center"
+    >
       <Image
         source={require("@/assets/ticket/band.png")}
         className="w-24 h-52 z-10"
@@ -118,6 +130,6 @@ export function Credential() {
       </View>
 
       <ModalComponent isOpen={expanded} handleModal={handleModal} />
-    </View>
+    </MotiView>
   );
 }
